@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GADHAUS | Apple EarPods Type-C</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            orange: '#FF6B00',
+                            dark: '#050507',
+                            card: '#121217',
+                            border: '#272730'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- React, ReactDOM, Babel, Lucide Icons & Framer Motion -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        
+        html, body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #050507;
+            color: #f5f5f7;
+            overflow-x: hidden;
+        }
+
+        .glow-orange {
+            box-shadow: 0 0 80px -10px rgba(255, 107, 0, 0.25);
+        }
+
+        .text-gradient-orange {
+            background: linear-gradient(135deg, #FF8C38 0%, #FF6B00 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .glass-card {
+            background: rgba(18, 18, 23, 0.7);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        @keyframes floatPedal {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-12px) rotate(3deg); }
+        }
+        .animate-float {
+            animation: floatPedal 6s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { motion, AnimatePresence } = window.Motion;
+
+        const districtData = {
+            "Kerala": ["Alappuzha", "Ernakulam", "Idukki", "Kannur", "Kasaragod", "Kollam", "Kottayam", "Kozhikode", "Malappuram", "Palakkad", "Pathanamthitta", "Thiruvananthapuram", "Thrissur", "Wayanad"],
+            "Tamil Nadu": ["Chennai", "Coimbatore", "Madurai", "Salem", "Tiruchirappalli"],
+            "Karnataka": ["Bengaluru", "Mysuru", "Mangaluru", "Hubballi"],
+            "Maharashtra": ["Mumbai", "Pune", "Nagpur"]
+        };
+
+        function App() {
+            // View State: 'auth' (default mandatory auth), 'store', 'admin'
+            const [currentView, setCurrentView] = useState('auth');
+            const [authTab, setAuthTab] = useState('signup');
+            const [user, setUser] = useState(null);
+            const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+
+            // Auth State
+            const [loginData, setLoginData] = useState({ username: '', password: '' });
+            
+            // Updated Signup Form Fields (Username, Email, Password, Confirm Password)
+            const [signupData, setSignupData] = useState({ 
+                username: '', 
+                email: '', 
+                password: '', 
+                confirmPassword: '' 
+            });
+
+            // Database
+            const [registeredUsers, setRegisteredUsers] = useState([]);
+            const [activityLogs, setActivityLogs] = useState([]);
+            const [ordersList, setOrdersList] = useState([]);
+
+            // Checkout Form
+            const [orderForm, setOrderForm] = useState({
+                name: '',
+                address: '',
+                postOffice: '',
+                state: 'Kerala',
+                district: 'Ernakulam',
+                city: '',
+                pincode: '',
+                customer: '',
+                email: '',
+                mobile1: '',
+                mobile2: ''
+            });
+
+            const logActivity = (action, userRef) => {
+                const newLog = {
+                    user: userRef || 'Guest',
+                    action: action,
+                    time: new Date().toLocaleTimeString() + ' ' + new Date().toLocaleDateString()
+                };
+                setActivityLogs(prev => [newLog, ...prev]);
+            };
+
+            // Handle Signup Validation
+            const handleSignup = (e) => {
+                e.preventDefault();
+                
+                if (signupData.password !== signupData.confirmPassword) {
+                    alert('Passwords do not match! Please check and try again.');
+                    return;
+                }
+
+                const newUser = {
+                    username: signupData.username,
+                    email: signupData.email,
+                    password: signupData.password,
+                    date: new Date().toLocaleString()
+                };
+
+                setRegisteredUsers(prev => [...prev, newUser]);
+                alert('Account Created Successfully! Please login now.');
+                
+                // Switch to login tab and pre-fill Username
+                setAuthTab('login');
+                setLoginData({ username: newUser.username, password: '' });
+                setSignupData({ username: '', email: '', password: '', confirmPassword: '' });
+            };
+
+            // Handle Login Validation
+            const handleLogin = (e) => {
+                e.preventDefault();
+                
+                // TokyoVoid Admin Credentials Check
+                if (loginData.username === 'tokyovoid' && loginData.password === 'tokyovoid2026') {
+                    const adminObj = { username: 'tokyovoid', isAdmin: true };
+                    setUser(adminObj);
+                    logActivity('Logged into Admin Dashboard', 'tokyovoid');
+                    setCurrentView('admin');
+                    return;
+                }
+
+                // Normal Registered User Login Check (by Username or Email)
+                const existing = registeredUsers.find(u => 
+                    (u.username === loginData.username || u.email === loginData.username) && 
+                    u.password === loginData.password
+                );
+                
+                if (existing) {
+                    setUser(existing);
+                    logActivity('Logged In to Store', existing.username);
+                    setCurrentView('store');
+                } else {
+                    alert('Invalid Username/Email or Password! Please Sign Up first.');
+                }
+            };
+
+            const openCheckout = () => {
+                if (user) {
+                    setOrderForm(prev => ({
+                        ...prev,
+                        name: user.username,
+                        customer: user.username,
+                        email: user.email || ''
+                    }));
+                }
+                logActivity('Clicked Purchase / Buy Now', user ? user.username : 'Guest');
+                setIsCheckoutOpen(true);
+            };
+
+            const handleStateChange = (e) => {
+                const selectedState = e.target.value;
+                const defaultDistrict = districtData[selectedState] ? districtData[selectedState][0] : '';
+                setOrderForm(prev => ({
+                    ...prev,
+                    state: selectedState,
+                    district: defaultDistrict
+                }));
+            };
+
+            const handleWhatsAppOrder = (e) => {
+                e.preventDefault();
+                
+                const newOrder = { ...orderForm, date: new Date().toLocaleString(), placedBy: user ? user.username : 'Guest' };
+                setOrdersList(prev => [newOrder, ...prev]);
+                logActivity(`Placed Order (Name: ${orderForm.name}, Phone: ${orderForm.mobile1})`, user ? user.username : 'Guest');
+
+                const msg = `Hi GADHAUS! 🛍️
+
+Order Receipt:
+*Product:* Apple Wired Earphones Type-C Cable
+*Price:* ₹399
+
+*Delivery Details:*
+• Name : ${orderForm.name || 'N/A'}
+• Address: ${orderForm.address || 'N/A'}
+• Post Office : ${orderForm.postOffice || 'N/A'}
+• District : ${orderForm.district || 'N/A'}
+• City: ${orderForm.city || 'N/A'}
+• State : ${orderForm.state || 'N/A'}
+• Pincode: ${orderForm.pincode || 'N/A'}
+
+*Customer:* ${orderForm.customer || orderForm.name || 'N/A'}
+*Email:* ${orderForm.email || 'N/A'}
+*Mobile Number1:* ${orderForm.mobile1 || 'N/A'}
+*Mobile Number2:* ${orderForm.mobile2 || 'N/A'}`;
+
+                const targetNumber = "918891237049";
+                window.open(`https://wa.me/${targetNumber}?text=${encodeURIComponent(msg)}`, '_blank');
+            };
+
+            useEffect(() => {
+                if (window.lucide) window.lucide.createIcons();
+            });
+
+            return (
+                <div className="min-h-screen bg-[#050507] text-white selection:bg-orange-500 selection:text-black relative">
+                    
+                    {/* NAVBAR */}
+                    {currentView !== 'auth' && (
+                        <motion.nav 
+                            initial={{ y: -100 }}
+                            animate={{ y: 0 }}
+                            transition={{ duration: 0.6 }}
+                            className="fixed top-0 left-0 right-0 z-40 bg-[#050507]/80 backdrop-blur-xl border-b border-white/10 px-6 py-4 flex items-center justify-between"
+                        >
+                            <div className="flex items-center gap-3 cursor-pointer" onClick={() => setCurrentView('store')}>
+                                <img src="IMG_20260804_202358.jpg" alt="GADHAUS" className="w-10 h-10 rounded-full border border-orange-500/50 glow-orange" />
+                                <span className="font-extrabold text-xl tracking-wider">GAD<span className="text-orange-500">HAUS</span></span>
+                            </div>
+
+                            <div className="flex items-center gap-4">
+                                {user && (
+                                    <div className="flex items-center gap-3 bg-zinc-900/80 px-4 py-2 rounded-full border border-white/10 text-xs">
+                                        <span className="font-semibold text-orange-400">Hi, @{user.username}</span>
+                                        {user.isAdmin && (
+                                            <button 
+                                                onClick={() => setCurrentView(currentView === 'admin' ? 'store' : 'admin')} 
+                                                className="text-zinc-300 hover:text-white underline font-bold"
+                                            >
+                                                {currentView === 'admin' ? 'View Store' : 'Admin UI'}
+                                            </button>
+                                        )}
+                                        <button onClick={() => { setUser(null); setCurrentView('auth'); }} className="text-red-400 hover:underline">Logout</button>
+                                    </div>
+                                )}
+                            </div>
+                        </motion.nav>
+                    )}
+
+                    {/* VIEW 1: AUTHENTICATION SCREEN */}
+                    {currentView === 'auth' && (
+                        <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden py-12">
+                            <div className="absolute w-[600px] h-[600px] bg-orange-500/10 rounded-full blur-[140px] pointer-events-none"></div>
+
+                            <motion.div 
+                                initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                                className="glass-card max-w-md w-full p-8 rounded-3xl border border-white/10 relative glow-orange my-auto"
+                            >
+                                <div className="text-center mb-6">
+                                    <img src="IMG_20260804_202358.jpg" alt="GADHAUS Logo" className="w-20 h-20 rounded-full mx-auto mb-3 border-2 border-orange-500 animate-float" />
+                                    <h2 className="text-2xl font-extrabold text-white">GADHAUS Access</h2>
+                                    <p className="text-xs text-zinc-400 mt-1">Sign up or Log in to proceed to store</p>
+                                </div>
+
+                                {/* Auth Toggle Tabs */}
+                                <div className="flex bg-zinc-900 p-1 rounded-xl mb-6 text-xs font-bold">
+                                    <button 
+                                        onClick={() => setAuthTab('signup')} 
+                                        className={`flex-1 py-2.5 rounded-lg transition ${authTab === 'signup' ? 'bg-orange-500 text-black' : 'text-zinc-400 hover:text-white'}`}
+                                    >
+                                        SIGN UP
+                                    </button>
+                                    <button 
+                                        onClick={() => setAuthTab('login')} 
+                                        className={`flex-1 py-2.5 rounded-lg transition ${authTab === 'login' ? 'bg-orange-500 text-black' : 'text-zinc-400 hover:text-white'}`}
+                                    >
+                                        LOGIN
+                                    </button>
+                                </div>
+
+                                {authTab === 'signup' ? (
+                                    /* SIGN UP FORM (User Name, Email, Password, Confirm Password) */
+                                    <form onSubmit={handleSignup} className="space-y-4 text-xs">
+                                        <div>
+                                            <label className="block text-zinc-400 mb-1 font-semibold">User Name *</label>
+                                            <input 
+                                                type="text" 
+                                                required 
+                                                placeholder="Enter User Name" 
+                                                value={signupData.username} 
+                                                onChange={e => setSignupData({...signupData, username: e.target.value})} 
+                                                className="w-full bg-zinc-900/90 border border-zinc-700 rounded-xl p-3.5 text-white focus:outline-none focus:border-orange-500" 
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-zinc-400 mb-1 font-semibold">Gmail / Email *</label>
+                                            <input 
+                                                type="email" 
+                                                required 
+                                                placeholder="Enter Email Address" 
+                                                value={signupData.email} 
+                                                onChange={e => setSignupData({...signupData, email: e.target.value})} 
+                                                className="w-full bg-zinc-900/90 border border-zinc-700 rounded-xl p-3.5 text-white focus:outline-none focus:border-orange-500" 
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-zinc-400 mb-1 font-semibold">Password *</label>
+                                            <input 
+                                                type="password" 
+                                                required 
+                                                placeholder="Create Password" 
+                                                value={signupData.password} 
+                                                onChange={e => setSignupData({...signupData, password: e.target.value})} 
+                                                className="w-full bg-zinc-900/90 border border-zinc-700 rounded-xl p-3.5 text-white focus:outline-none focus:border-orange-500" 
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-zinc-400 mb-1 font-semibold">Confirm Password *</label>
+                                            <input 
+                                                type="password" 
+                                                required 
+                                                placeholder="Re-enter Password" 
+                                                value={signupData.confirmPassword} 
+                                                onChange={e => setSignupData({...signupData, confirmPassword: e.target.value})} 
+                                                className="w-full bg-zinc-900/90 border border-zinc-700 rounded-xl p-3.5 text-white focus:outline-none focus:border-orange-500" 
+                                            />
+                                        </div>
+                                        <button type="submit" className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-black font-extrabold text-sm rounded-xl transition duration-300 shadow-lg shadow-orange-500/20 mt-2">
+                                            CREATE ACCOUNT
+                                        </button>
+                                    </form>
+                                ) : (
+                                    /* LOGIN FORM */
+                                    <form onSubmit={handleLogin} className="space-y-4 text-xs">
+                                        <div>
+                                            <label className="block text-zinc-400 mb-1 font-semibold">User Name or Email</label>
+                                            <input 
+                                                type="text" 
+                                                required 
+                                                placeholder="Enter username or email" 
+                                                value={loginData.username} 
+                                                onChange={e => setLoginData({...loginData, username: e.target.value})} 
+                                                className="w-full bg-zinc-900/90 border border-zinc-700 rounded-xl p-3.5 text-white focus:outline-none focus:border-orange-500" 
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-zinc-400 mb-1 font-semibold">Password</label>
+                                            <input 
+                                                type="password" 
+                                                required 
+                                                placeholder="Enter password" 
+                                                value={loginData.password} 
+                                                onChange={e => setLoginData({...loginData, password: e.target.value})} 
+                                                className="w-full bg-zinc-900/90 border border-zinc-700 rounded-xl p-3.5 text-white focus:outline-none focus:border-orange-500" 
+                                            />
+                                        </div>
+                                        <button type="submit" className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-black font-extrabold text-sm rounded-xl transition duration-300 shadow-lg shadow-orange-500/20 mt-2">
+                                            ENTER STORE
+                                        </button>
+                                    </form>
+                                )}
+                            </motion.div>
+                        </div>
+                    )}
+
+                    {/* VIEW 2: STORE PAGE */}
+                    {currentView === 'store' && (
+                        <div className="pt-24 pb-32 space-y-32">
+                            
+                            {/* HERO SECTION (NO BUTTONS) */}
+                            <section className="min-h-[90vh] flex flex-col justify-center items-center px-4 text-center relative max-w-6xl mx-auto">
+                                <div className="absolute w-[600px] h-[600px] bg-orange-500/10 rounded-full blur-[150px] pointer-events-none"></div>
+
+                                <motion.div 
+                                    initial={{ opacity: 0, scale: 0.5 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ duration: 0.8 }}
+                                    className="mb-8"
+                                >
+                                    <img src="IMG_20260804_202358.jpg" alt="Logo" className="w-28 h-28 rounded-full border-2 border-orange-500 glow-orange animate-float mx-auto" />
+                                </motion.div>
+
+                                <motion.span 
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.8, delay: 0.2 }}
+                                    className="text-xs font-extrabold text-orange-500 uppercase tracking-widest mb-4 bg-orange-500/10 px-4 py-1.5 rounded-full border border-orange-500/20"
+                                >
+                                    ACOUSTIC PERFECTION
+                                </motion.span>
+
+                                <motion.h1 
+                                    initial={{ opacity: 0, y: 30 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.8, delay: 0.3 }}
+                                    className="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-tight text-white max-w-4xl"
+                                >
+                                    PURE LOSSLESS AUDIO. <br />
+                                    <span className="text-gradient-orange">TYPE-C EARPODS.</span>
+                                </motion.h1>
+
+                                <motion.p 
+                                    initial={{ opacity: 0, y: 30 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.8, delay: 0.4 }}
+                                    className="text-zinc-400 max-w-xl mt-6 text-sm lg:text-base font-light leading-relaxed mx-auto"
+                                >
+                                    Engineered with direct digital Type-C architecture for ultra-low latency playback and high-definition voice clarity.
+                                </motion.p>
+
+                                <motion.div 
+                                    initial={{ opacity: 0, y: 50, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    transition={{ duration: 1, delay: 0.5 }}
+                                    className="mt-14 w-full max-w-4xl"
+                                >
+                                    <div className="glass-card p-4 rounded-3xl border border-white/10 glow-orange">
+                                        <img src="IMG-20260807-WA0001.jpg" alt="EarPods Hero" className="w-full max-h-[520px] object-cover rounded-2xl mx-auto" />
+                                    </div>
+                                </motion.div>
+                            </section>
+
+                            {/* DETAILS SECTION */}
+                            <section className="max-w-7xl mx-auto px-4 space-y-24">
+                                <motion.div 
+                                    initial={{ opacity: 0, y: 40 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={{ once: true }}
+                                    transition={{ duration: 0.8 }}
+                                    className="text-center space-y-4"
+                                >
+                                    <h2 className="text-3xl lg:text-5xl font-extrabold">Studio Acoustics In Your Hands</h2>
+                                    <p className="text-zinc-400 text-sm max-w-lg mx-auto">Explore every detail of genuine Apple Type-C EarPods built for maximum comfort.</p>
+                                </motion.div>
+
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                                    <motion.div 
+                                        initial={{ opacity: 0, x: -40 }}
+                                        whileInView={{ opacity: 1, x: 0 }}
+                                        viewport={{ once: true }}
+                                        transition={{ duration: 0.8 }}
+                                        className="glass-card p-6 rounded-3xl border border-white/10 space-y-6"
+                                    >
+                                        <img src="IMG-20260807-WA0000.jpg" alt="Box Packaging" className="w-full rounded-2xl object-cover max-h-[400px]" />
+                                        <div>
+                                            <h3 className="text-2xl font-bold text-white">Original Factory Box</h3>
+                                            <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+                                                Every unit comes in factory sealed box packaging with authentic serial tracking and full Type-C digital audio chip integration.
+                                            </p>
+                                        </div>
+                                    </motion.div>
+
+                                    <motion.div 
+                                        initial={{ opacity: 0, x: 40 }}
+                                        whileInView={{ opacity: 1, x: 0 }}
+                                        viewport={{ once: true }}
+                                        transition={{ duration: 0.8 }}
+                                        className="glass-card p-6 rounded-3xl border border-white/10 space-y-6"
+                                    >
+                                        <img src="IMG-20260726-WA0008.jpg" alt="Remote Controls" className="w-full rounded-2xl object-cover max-h-[400px]" />
+                                        <div>
+                                            <h3 className="text-2xl font-bold text-white">Built-in Remote & Mic</h3>
+                                            <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+                                                Seamlessly answer calls, adjust audio output levels, and control track playback without touching your phone screen.
+                                            </p>
+                                        </div>
+                                    </motion.div>
+                                </div>
+                            </section>
+
+                            {/* PRICING SECTION */}
+                            <section className="py-20 bg-zinc-950/80 border-y border-white/10 px-4">
+                                <motion.div 
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    whileInView={{ opacity: 1, scale: 1 }}
+                                    viewport={{ once: true }}
+                                    transition={{ duration: 0.8 }}
+                                    className="max-w-4xl mx-auto text-center space-y-8"
+                                >
+                                    <span className="text-xs font-bold text-orange-500 uppercase tracking-widest px-3 py-1 bg-orange-500/10 rounded-full border border-orange-500/20">
+                                        Special Discount Offer
+                                    </span>
+                                    
+                                    <h2 className="text-3xl lg:text-5xl font-extrabold text-white">Apple Type-C EarPods</h2>
+
+                                    <div className="flex items-center justify-center gap-6">
+                                        <span className="text-5xl lg:text-7xl font-black text-orange-500">₹399</span>
+                                        <span className="text-2xl lg:text-4xl font-bold text-zinc-600 line-through">₹599</span>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-left max-w-2xl mx-auto pt-6 text-xs">
+                                        <div className="p-4 bg-zinc-900/80 rounded-2xl border border-white/5">
+                                            <p className="text-zinc-500 font-semibold">Connector</p>
+                                            <p className="font-bold text-white mt-1">USB Type-C</p>
+                                        </div>
+                                        <div className="p-4 bg-zinc-900/80 rounded-2xl border border-white/5">
+                                            <p className="text-zinc-500 font-semibold">Microphone</p>
+                                            <p className="font-bold text-white mt-1">HD Voice Mic</p>
+                                        </div>
+                                        <div className="p-4 bg-zinc-900/80 rounded-2xl border border-white/5">
+                                            <p className="text-zinc-500 font-semibold">Compatibility</p>
+                                            <p className="font-bold text-white mt-1">iOS & Android</p>
+                                        </div>
+                                        <div className="p-4 bg-zinc-900/80 rounded-2xl border border-white/5">
+                                            <p className="text-zinc-500 font-semibold">Warranty</p>
+                                            <p className="font-bold text-white mt-1">GADHAUS Tested</p>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            </section>
+
+                            {/* BUY BUTTON SECTION */}
+                            <section className="max-w-2xl mx-auto px-4 text-center pt-10">
+                                <motion.div 
+                                    initial={{ opacity: 0, y: 40 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={{ once: true }}
+                                    transition={{ duration: 0.8 }}
+                                    className="glass-card p-10 lg:p-14 rounded-3xl border border-orange-500/30 space-y-6 glow-orange"
+                                >
+                                    <h3 className="text-3xl font-extrabold text-white">Ready to Order?</h3>
+                                    <p className="text-zinc-400 text-xs leading-relaxed max-w-md mx-auto">
+                                        Click the button below to specify your delivery address and complete your order on WhatsApp.
+                                    </p>
+
+                                    <button 
+                                        onClick={openCheckout}
+                                        className="w-full py-5 rounded-2xl bg-orange-500 hover:bg-orange-600 text-black font-extrabold text-base transition duration-300 shadow-2xl shadow-orange-500/40 tracking-wider transform hover:scale-[1.02]"
+                                    >
+                                        BUY NOW THE PRODUCT
+                                    </button>
+                                </motion.div>
+                            </section>
+
+                        </div>
+                    )}
+
+                    {/* VIEW 3: ADMIN UI */}
+                    {currentView === 'admin' && user?.isAdmin && (
+                        <div className="pt-28 px-4 lg:px-12 max-w-7xl mx-auto pb-32">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4 border-b border-white/10 pb-6">
+                                <div>
+                                    <h2 className="text-3xl font-black text-orange-500">TokyoVoid Admin Dashboard</h2>
+                                    <p className="text-xs text-zinc-400 mt-1">Monitor user registrations, email details & WhatsApp orders</p>
+                                </div>
+                                <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20 w-fit">
+                                    System Active
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                
+                                {/* 1. Registered Users (showing Username & Email) */}
+                                <div className="glass-card p-6 rounded-2xl border border-white/10 space-y-4">
+                                    <h3 className="font-extrabold text-lg text-white flex items-center justify-between">
+                                        <span>Registered Users</span>
+                                        <span className="text-xs bg-orange-500/20 text-orange-400 px-2.5 py-0.5 rounded-full font-bold">{registeredUsers.length}</span>
+                                    </h3>
+                                    <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                                        {registeredUsers.length === 0 ? (
+                                            <p className="text-xs text-zinc-500">No registered users yet.</p>
+                                        ) : (
+                                            registeredUsers.map((u, i) => (
+                                                <div key={i} className="p-3 bg-zinc-900/90 rounded-xl text-xs space-y-1 border border-white/5">
+                                                    <p className="font-bold text-white">User: <span className="text-orange-400">@{u.username}</span></p>
+                                                    <p className="text-zinc-300 text-[11px]">Email: {u.email}</p>
+                                                    <p className="text-zinc-500 text-[10px]">{u.date}</p>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* 2. Activity Tracker */}
+                                <div className="glass-card p-6 rounded-2xl border border-white/10 space-y-4">
+                                    <h3 className="font-extrabold text-lg text-white flex items-center justify-between">
+                                        <span>Activity Logs</span>
+                                        <span className="text-xs bg-orange-500/20 text-orange-400 px-2.5 py-0.5 rounded-full font-bold">{activityLogs.length}</span>
+                                    </h3>
+                                    <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                                        {activityLogs.length === 0 ? (
+                                            <p className="text-xs text-zinc-500">No activity recorded yet.</p>
+                                        ) : (
+                                            activityLogs.map((act, i) => (
+                                                <div key={i} className="p-3 bg-zinc-900/90 rounded-xl text-xs space-y-1 border border-white/5">
+                                                    <p className="font-semibold text-zinc-300"><span className="text-orange-400">@{act.user}</span>: {act.action}</p>
+                                                    <p className="text-zinc-600 text-[10px]">{act.time}</p>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* 3. Placed Orders */}
+                                <div className="glass-card p-6 rounded-2xl border border-white/10 space-y-4">
+                                    <h3 className="font-extrabold text-lg text-white flex items-center justify-between">
+                                        <span>Orders Received</span>
+                                        <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2.5 py-0.5 rounded-full font-bold">{ordersList.length}</span>
+                                    </h3>
+                                    <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                                        {ordersList.length === 0 ? (
+                                            <p className="text-xs text-zinc-500">No orders placed yet.</p>
+                                        ) : (
+                                            ordersList.map((ord, i) => (
+                                                <div key={i} className="p-3 bg-zinc-900/90 rounded-xl text-xs space-y-1 border border-emerald-500/30">
+                                                    <p className="font-bold text-emerald-400">{ord.name} ({ord.district}, {ord.state})</p>
+                                                    <p className="text-zinc-300">Ph: {ord.mobile1} {ord.mobile2 ? `/ ${ord.mobile2}` : ''}</p>
+                                                    <p className="text-zinc-400">PO: {ord.postOffice}</p>
+                                                    <p className="text-zinc-500 text-[10px]">{ord.date} • Placed by @{ord.placedBy}</p>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    )}
+
+                    {/* CHECKOUT POPUP */}
+                    {isCheckoutOpen && (
+                        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+                            <motion.div 
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="glass-card max-w-2xl w-full p-6 lg:p-8 rounded-3xl border border-white/20 relative my-8 glow-orange"
+                            >
+                                <button onClick={() => setIsCheckoutOpen(false)} className="absolute top-6 right-6 text-zinc-400 hover:text-white font-bold text-xl">✕</button>
+
+                                <h3 className="text-2xl font-extrabold text-white mb-1">Delivery Details</h3>
+                                <p className="text-xs text-zinc-400 mb-6">Apple Wired Earphones Type-C Cable • ₹399</p>
+
+                                <form onSubmit={handleWhatsAppOrder} className="space-y-4 text-xs">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-zinc-400 mb-1 font-semibold">Your Name *</label>
+                                            <input type="text" required value={orderForm.name} onChange={e => setOrderForm({...orderForm, name: e.target.value})} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-white focus:outline-none focus:border-orange-500" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-zinc-400 mb-1 font-semibold">Receiver Name</label>
+                                            <input type="text" value={orderForm.customer} onChange={e => setOrderForm({...orderForm, customer: e.target.value})} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-white focus:outline-none focus:border-orange-500" />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-zinc-400 mb-1 font-semibold">Delivery Address *</label>
+                                        <textarea required rows="2" value={orderForm.address} onChange={e => setOrderForm({...orderForm, address: e.target.value})} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-white focus:outline-none focus:border-orange-500"></textarea>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-zinc-400 mb-1 font-semibold">Post Office *</label>
+                                            <input type="text" required value={orderForm.postOffice} onChange={e => setOrderForm({...orderForm, postOffice: e.target.value})} placeholder="e.g. Aluva SO" className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-white focus:outline-none focus:border-orange-500" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-zinc-400 mb-1 font-semibold">City *</label>
+                                            <input type="text" required value={orderForm.city} onChange={e => setOrderForm({...orderForm, city: e.target.value})} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-white focus:outline-none focus:border-orange-500" />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label className="block text-zinc-400 mb-1 font-semibold">State *</label>
+                                            <select value={orderForm.state} onChange={handleStateChange} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-white focus:outline-none focus:border-orange-500">
+                                                {Object.keys(districtData).map((st, i) => <option key={i} value={st}>{st}</option>)}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-zinc-400 mb-1 font-semibold">District *</label>
+                                            <select value={orderForm.district} onChange={e => setOrderForm({...orderForm, district: e.target.value})} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-white focus:outline-none focus:border-orange-500">
+                                                {districtData[orderForm.state]?.map((dst, i) => <option key={i} value={dst}>{dst}</option>)}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-zinc-400 mb-1 font-semibold">Pincode *</label>
+                                            <input type="text" required value={orderForm.pincode} onChange={e => setOrderForm({...orderForm, pincode: e.target.value})} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-white focus:outline-none focus:border-orange-500" />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-zinc-400 mb-1 font-semibold">Mobile Number 1 *</label>
+                                            <input type="tel" required value={orderForm.mobile1} onChange={e => setOrderForm({...orderForm, mobile1: e.target.value})} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-white focus:outline-none focus:border-orange-500" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-zinc-400 mb-1 font-semibold">Mobile Number 2</label>
+                                            <input type="tel" value={orderForm.mobile2} onChange={e => setOrderForm({...orderForm, mobile2: e.target.value})} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-white focus:outline-none focus:border-orange-500" />
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-black font-extrabold text-sm rounded-xl transition duration-300 mt-4 shadow-lg shadow-emerald-500/20">
+                                        CONFIRM ORDER ON WHATSAPP
+                                    </button>
+                                </form>
+                            </motion.div>
+                        </div>
+                    )}
+
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
