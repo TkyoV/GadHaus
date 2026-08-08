@@ -64,6 +64,29 @@
         .animate-float {
             animation: floatPedal 6s ease-in-out infinite;
         }
+     <script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyA8ufLn891tNFgdmZU-7Sswdd3niSwawNk",
+    authDomain: "gadhaustkv.firebaseapp.com",
+    projectId: "gadhaustkv",
+    storageBucket: "gadhaustkv.firebasestorage.app",
+    messagingSenderId: "819828276151",
+    appId: "1:819828276151:web:23e2514930c394b7d58632",
+    measurementId: "G-JH03YD4RBC"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
     </style>
 </head>
 <body>
